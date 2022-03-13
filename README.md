@@ -1,2 +1,2 @@
-# aws-lambda-oyster-analytics
-Analytics on for the Oyster Haven Project
+# aws-lambda-timestream-query
+A service to query the timestream data for weather data

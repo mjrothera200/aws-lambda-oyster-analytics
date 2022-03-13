@@ -1,0 +1,52 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "timestream:Select",
+        "timestream:SelectValues",
+        "timestream:ListMeasures"
+      ],
+      "Resource": "arn:aws:timestream:us-east-1:922129242138:database/oyster-haven/table/temp-logger"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "timestream:Select",
+        "timestream:SelectValues",
+        "timestream:ListMeasures"
+      ],
+      "Resource": "arn:aws:timestream:us-east-1:922129242138:database/oyster-haven/table/weather-data"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "timestream:Select",
+        "timestream:SelectValues",
+        "timestream:ListMeasures"
+      ],
+      "Resource": "arn:aws:timestream:us-east-1:922129242138:database/oyster-haven/table/water-data"
+    },
+    {
+      "Principal": {
+          "Service": "lambda.amazonaws.com"
+        },
+      "Action": [
+          "timestream:WriteRecords"
+      ],
+      "Resource": [
+          "arn:aws:timestream:us-east-1:922129242138:database/oyster-haven/table/oyster-events"
+      ],
+      "Effect": "Allow"
+  }
+    
+  ]
+}
