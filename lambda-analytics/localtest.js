@@ -22,9 +22,15 @@ async function callServices() {
     var results = {}
 
   
-    results = await timeseries.getSignificantEvents(queryClient, "wind", "1h", "365d", "20")
+    //results = await timeseries.getSignificantEvents(queryClient, "wind", "1h", "365d", "20")
+    //console.log(results)
+    //var writeresults = await timeseries.writeEventRecords(writeClient, results.dataset, "threshold", "high", results.metadata.measure_name)
+    //console.log(writeresults)
+    
+
+    results = await timeseries.getRateOfChangeEvents(queryClient, "rain", "1h", "365d", "15")
     console.log(results)
-    var writeresults = await timeseries.writeEventRecords(writeClient, results.dataset, "threshold", "high", results.metadata.measure_name)
+    var writeresults = await timeseries.writeEventRecords(writeClient, results.dataset, "rateofchange", "high", results.metadata.measure_name)
     console.log(writeresults)
 }
 

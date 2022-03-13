@@ -42,6 +42,19 @@ const measure_metadata = {
         ydomainlow: 0,
         ydomainhigh: 90
     },
+    rain: {
+        database: constants.DATABASE_NAME,
+        table: constants.WEATHER_DATA_TABLE_NAME,
+        slicevalue: "source",
+        measure_name: "rain",
+        measure_value: "measure_value::varchar",
+        yunits: "inches",
+        ytitle: "Rainfall",
+        lowthreshold: 0,
+        highthreshold: 5,
+        ydomainlow: 0,
+        ydomainhigh: 15
+    },
     waterlight: {
         database: constants.DATABASE_NAME,
         table: constants.TEMP_LOGGER_TABLE_NAME,
@@ -114,6 +127,61 @@ async function getMeasures() {
     return Object.keys(measure_metadata)
 
 }
+
+// queryclient:  the AWS timestream client
+// measure_name:  corresponds to the measure name in the table above
+// bintime:  the window interval (i.e "1h" for one hour)
+// queryduration:  the overall timespan of analytics (i.e "365d" for the last 365 days)
+// threshold:  the average value that will trigger the event to be raised (i.e over 20 mph for wind - '20')
+
+async function getRateOfChangeEvents(queryClient, measure_name, bintime, queryduration, threshold) {
+
+    // get the actual details from the metadata
+    const measure = measure_metadata[measure_name]
+    console.log(measure)
+
+    const query = `WITH binned_view
+    AS (
+        SELECT BIN(time, ${bintime}) AS binnedTime
+            ,MIN(CAST(${measure.measure_value} as DOUBLE)) AS minValuePerBucket
+            ,${measure.slicevalue}
+        FROM "${measure.database}"."${measure.table}"
+        WHERE time BETWEEN ago(365d) AND now()
+            AND measure_name = '${measure.measure_name}'
+        GROUP BY ${measure.slicevalue}
+            ,BIN(time, ${bintime})
+        )
+        ,interpolated
+    AS (
+        SELECT ${measure.slicevalue}
+            ,derivative_linear(CREATE_TIME_SERIES(binnedTime, minValuePerBucket), ${bintime}) AS rateOfValueChange
+        FROM binned_view
+        GROUP BY ${measure.slicevalue}
+        ), allchanges
+    AS (
+    SELECT ${measure.slicevalue}
+        ,time
+        ,value
+    FROM interpolated
+    CROSS JOIN UNNEST(rateOfValueChange)
+      ) select ${measure.slicevalue}, to_milliseconds(BIN(time,1d)) as x, sum(value)*.01 as y, '1' as eventParm1 from allchanges where value > ${threshold} group by source, BIN(time,1d)`
+
+    console.log(query)
+
+    const queries = [query];
+
+    var parsedRows = []
+    for (let i = 0; i < queries.length; i++) {
+        console.log(`Running query ${i + 1} : ${queries[i]}`);
+        parsedRows = await getAllRows(queryClient, queries[i], null);
+    }
+    console.log(parsedRows)
+    const results = convertSignificantEventRows(parsedRows)
+    results["metadata"] = measure
+    return results
+}
+
+
 
 // queryclient:  the AWS timestream client
 // measure_name:  corresponds to the measure name in the table above
@@ -394,4 +462,4 @@ function submitBatch(records, counter, writeClient) {
 }
 
 
-module.exports = { getMeasures, getSignificantEvents, writeEventRecords };
+module.exports = { getMeasures, getSignificantEvents, writeEventRecords, getRateOfChangeEvents };
