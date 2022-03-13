@@ -24,10 +24,10 @@ echo "Finishing Process!"
 # setup the trigger - Note change to 'rate(7 days)'
 aws events put-rule \
 --name $ROOT-rule \
---schedule-expression 'rate(5 minutes)'
+--schedule-expression 'rate(7 days)'
 
 aws lambda add-permission \
---function-name LogScheduledEvent \
+--function-name $ROOT \
 --statement-id $ROOT-event \
 --action 'lambda:InvokeFunction' \
 --principal events.amazonaws.com \
