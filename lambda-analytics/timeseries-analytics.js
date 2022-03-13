@@ -128,7 +128,7 @@ async function getSignificantEvents(queryClient, measure_name, bintime, querydur
     console.log(measure)
 
     const query = `with binnedData AS ( SELECT BIN(time, ${bintime}) AS binned_timestamp, ${measure.slicevalue}, ROUND(AVG(CAST(${measure.measure_value} as DOUBLE)),2) AS avg_value, LAG(ROUND(AVG(CAST(${measure.measure_value} as DOUBLE)),2), 1) OVER ( PARTITION BY ${measure.slicevalue} ORDER BY BIN(time, ${bintime}) ) AS prev_avg_value FROM "${measure.database}"."${measure.table}" WHERE measure_name = '${measure.measure_name}' and time between ago(${queryduration}) and now() GROUP BY source, BIN(time, 1h) ORDER BY binned_timestamp ASC), cleanedData AS ( select binned_timestamp, ${measure.slicevalue}, avg_value, prev_avg_value, LAG(binned_timestamp, 1) OVER ( PARTITION BY ${measure.slicevalue} ORDER BY binned_timestamp ) AS prev_binned_timestamp from binnedData where avg_value > ${threshold} and prev_avg_value > ${threshold} order by binned_timestamp ), summarized AS ( select binned_timestamp,avg_value,binned_timestamp - prev_binned_timestamp as duration from cleanedData )
-select to_milliseconds(BIN(binned_timestamp, 1d)) AS x, avg(avg_value) as y, sum(duration) as duration
+select to_milliseconds(BIN(binned_timestamp, 1d)) AS x, avg(avg_value) as y, sum(duration) as eventParm1
         from summarized
             GROUP BY BIN(binned_timestamp, 1d)
         order by x ASC`
@@ -166,8 +166,10 @@ function convertSignificantEventRows(parsedRows) {
                     entry.x = parseInt(field_value)
                 } else if (field_name === 'y') {
                     entry.y = parseFloat(field_value)
-                } else if (field_name === 'duration') {
-                    entry.duration = parseFloat(field_value)
+                } else if (field_name === 'eventParm1') {
+                    entry.eventParm1 = parseFloat(field_value).toFixed().toString()
+                    // Just add another empty parameter as other styles of events may require 2
+                    entry.eventParm2 = '0'
                 }
             });
             if (entry.y < max.y) {
@@ -176,6 +178,8 @@ function convertSignificantEventRows(parsedRows) {
             if (entry.y > min.y) {
                 min = entry
             }
+            // 
+
             dataset.push(entry);
         }
         );
@@ -310,8 +314,9 @@ async function writeEventRecords(writeClient, events, eventType , eventClassific
 
         const dimensions = [
             { 'Name': 'eventType', 'Value': eventType },
-            { 'Name': 'eventClassification', 'Value': eventClassification }
-
+            { 'Name': 'eventClassification', 'Value': eventClassification },
+            { 'Name': 'eventParm1', 'Value': events[counter].eventParm1 },
+            { 'Name': 'eventParm2', 'Value': events[counter].eventParm2 }
         ];
         const recordTime = currentTime - counter * 50;
         let version = Date.now();
