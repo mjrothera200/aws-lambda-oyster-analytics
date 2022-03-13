@@ -21,6 +21,16 @@ echo "Waiting for it to be created...."
 sleep 60
 echo "Finishing Process!"
 
+# setup the trigger - Note change to 'rate(7 days)'
+aws events put-rule \
+--name $ROOT-rule \
+--schedule-expression 'rate(5 minutes)'
 
-# to do - maybe auto create the API
+aws lambda add-permission \
+--function-name LogScheduledEvent \
+--statement-id $ROOT-event \
+--action 'lambda:InvokeFunction' \
+--principal events.amazonaws.com \
+--source-arn arn:aws:events:us-east-1:$AWS_ACCOUNTID:rule/$ROOT-rule
 
+aws events put-targets --rule $ROOT-rule --targets file://$ROOT-targets.json
