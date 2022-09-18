@@ -13,7 +13,7 @@ cd ../setup
 mv ../lambda-analytics/function.zip .
 
 aws lambda create-function --function-name $ROOT \
---zip-file fileb://function.zip --handler index.handler --runtime nodejs12.x \
+--zip-file fileb://function.zip --handler index.handler --runtime nodejs16.x \
 --timeout 30 --memory-size 1024 \
 --role arn:aws:iam::$AWS_ACCOUNTID:role/$ROOT-role
 
